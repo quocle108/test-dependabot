@@ -2,23 +2,14 @@
 # Dependabot Configuration
 # =============================================================================
 #
-# This file tells Dependabot WHAT to monitor and HOW to create PRs.
-# Two separate blocks:
-#   1. Security updates — checks daily for CVEs, creates PRs for any fix
-#   2. Version updates — checks monthly for outdated deps, patch-only PRs
-#
-# Groups bundle related updates into a single PR to reduce noise.
-# All PRs require manual approval before merging.
+# Single npm block (Dependabot requires unique package-ecosystem + directory).
+# Groups separate security updates (by severity) and version updates (patch only).
 #
 # Docs: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 # =============================================================================
 
 version: 2
 updates:
-  # --- Security Updates ---
-  # Runs daily. When a CVE is found, Dependabot creates a PR to bump
-  # the vulnerable package to the first patched version.
-  # PRs are labeled "security" and assigned to reviewer for approval.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -30,11 +21,12 @@ updates:
       - "quocle108"
     labels:
       - "dependencies"
-      - "security"
-    # Group related updates into single PRs to reduce noise.
-    # Without groups, each transitive CVE gets its own PR
-    # (e.g. express alone generates 5+ PRs for qs, cookie, send, etc.)
+    # Ignore major/minor for version updates (not security updates)
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
     groups:
+      # --- Security Updates (3 groups by severity) ---
       # Case 1: Patch — auto-merge after CI passes
       patch-updates:
         applies-to: security-updates
@@ -52,27 +44,8 @@ updates:
           - "major"
       # Case 4: No fix — no PR created, tracked in Security tab alerts
 
-  # --- Version Updates ---
-  # Runs monthly (Monday, UTC).
-  # Only creates PRs for PATCH updates (e.g. 1.2.3 → 1.2.4).
-  # Minor and major version bumps are ignored — only security PRs
-  # can bump minor/major.
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-      day: "monday"
-      timezone: "Etc/UTC"
-    open-pull-requests-limit: 5
-    reviewers:
-      - "quocle108"
-    labels:
-      - "dependencies"
-      - "version-update"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major", "version-update:semver-minor"]
-    groups:
+      # --- Version Updates (patch only) ---
       version-patch-updates:
+        applies-to: version-updates
         update-types:
           - "patch"
